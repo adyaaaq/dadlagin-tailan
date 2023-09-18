@@ -8,7 +8,24 @@
 \usepackage{fontspec,xltxtra,xunicode}
 \setmainfont[Ligatures=TeX]{Times New Roman}
 \setsansfont{Arial}
+\usepackage{listings}
+\usepackage{xcolor} % for customizing colors
 
+% Define a custom code listing environment
+\lstnewenvironment{mycode}[1][]
+{
+  \lstset{
+    language=Python,           % Set the programming language (e.g., Python)
+    basicstyle=\ttfamily,      % Set the font style for the code
+    numbers=left,              % Display line numbers
+    numberstyle=\tiny,         % Style of line numbers
+    frame=single,              % Add a frame around the code
+    frameround=fttt,           % Set rounded corners for the frame
+    breaklines=true,           % Allow code to break across lines
+    #1                        % Additional custom options passed by the user
+  }
+}
+{}
 % \usepackage[utf8x]{inputenc}
 % \usepackage[mongolian]{babel}
 %\usepackage{natbib}

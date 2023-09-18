@@ -1,0 +1,241 @@
+\section{Үр дүн} График бүрийг зөв харуулж буй тоон мэдээллийг харах Query - нүүд 
+\begin{mycode}[caption =, language = SQL] 
+    -- 1. Niit zurchiliin too
+    select 
+      count(distinct z.id) 
+    from 
+      ZURCHIL z 
+      left join SHIIDVERLELT s on z.id = s.ZURCHIL_ID 
+    where 
+      (
+        (
+          z.STATUS_CODE = '8053' 
+          and z.ZH_STATUS_CODE is null
+        ) 
+        OR z.ZH_STATUS_CODE in (60002, 60005, 60003)
+      ) 
+      AND s.SHIIDVER_OGNOO BETWEEN '2022-09-02 00:00:00.000' 
+      AND '2023-07-20 11:40:52.000';
+    -- 1) Zurchiliin tohioldol bus nutguudaar
+    SELECT 
+      a.AIMAG_NAME, 
+      COUNT(DISTINCT z.id) 
+    FROM 
+      ZURCHIL z 
+      LEFT JOIN SHIIDVERLELT s ON z.id = s.ZURCHIL_ID 
+      left join ZURCHIL_GAZAR_NOHTSOL m on m.ZURCHIL_ID = z.ID 
+      LEFT JOIN ADDRESS a on a.ID = m.ZURCHIL_GAZAR_ADDRESS_ID 
+    WHERE 
+      (
+        (
+          z.STATUS_CODE = '8053' 
+          and z.ZH_STATUS_CODE is null
+        ) 
+        OR z.ZH_STATUS_CODE in (60002, 60005, 60003)
+      ) 
+      AND s.SHIIDVER_OGNOO BETWEEN '2023-04-21 00:00:00.000' 
+      AND '2023-07-27 00:00:00.000' 
+    GROUP BY 
+      a.AIMAG_NAME 
+    ORDER BY 
+      COUNT(DISTINCT z.id) DESC;
+    -- 2) Zurchiliin too huuli zuin zaaltuudaar
+    SELECT 
+      z.HUULI_ZUIL_NAME, 
+      COUNT(DISTINCT z.ID) 
+    FROM 
+      zurchil z 
+      LEFT JOIN SHIIDVERLELT m ON z.ID = m.ZURCHIL_ID 
+    WHERE 
+      m.SHIIDVER_OGNOO BETWEEN '2023-04-20 00:00:00.000' 
+      AND '2023-07-27 00:00:00.000' 
+      and (
+        (
+          z.STATUS_CODE = '8053' 
+          and z.ZH_STATUS_CODE is null
+        ) 
+        OR z.ZH_STATUS_CODE in (60002, 60005, 60003)
+      ) 
+    GROUP BY 
+      z.HUULI_ZUIL_NAME 
+    ORDER BY 
+      COUNT(DISTINCT z.ID) DESC;
+    -- 3) Holbogdogchiin turul
+    SELECT 
+      o.SUBJECT_TYPE_NAME, 
+      COUNT(distinct o.ID) 
+    FROM 
+      zurchil z 
+      LEFT JOIN OROLTSOGCH o ON z.ID = o.ZURCHIL_ID 
+      left join SHIIDVERLELT s on s.ZURCHIL_ID = z.ID 
+    WHERE 
+      s.SHIIDVER_OGNOO BETWEEN '2023-04-21 00:00:00.000' 
+      AND '2023-07-21 00:00:00.000' 
+      and (
+        (
+          z.STATUS_CODE = '8053' 
+          and z.ZH_STATUS_CODE is null
+        ) 
+        OR z.ZH_STATUS_CODE in (60002, 60005, 60003)
+      ) 
+    GROUP BY 
+      o.SUBJECT_TYPE_NAME;
+    -- 4) Shiitgel onogduulsan helber
+    select 
+      SUM(
+        CASE WHEN z.STATUS_CODE = '8053' 
+        AND z.ZURCHIL_GOMDOL_UNDESLEL_CODE = '1007' THEN 1 ELSE 0 END
+      ) as GazriinHyalbar, 
+      SUM(
+        CASE WHEN z.STATUS_CODE = '8053' 
+        AND z.ZURCHIL_GOMDOL_UNDESLEL_CODE != '1007' THEN 1 ELSE 0 END
+      ) as BurtgeliinHyalbar, 
+      SUM(
+        CASE WHEN z.ZH_STATUS_CODE = '60003' THEN 1 ELSE 0 END
+      ) as shiitgeleesChuluulsun, 
+      SUM(
+        CASE WHEN z.ZH_STATUS_CODE = '60002' THEN 1 ELSE 0 END
+      ) as shiitgelOnogduulsan, 
+      SUM(
+        CASE WHEN z.ZH_STATUS_CODE = '60005' THEN 1 ELSE 0 END
+      ) as shuuheesShiitgelOnogduulsan 
+    from 
+      ZURCHIL z 
+      left join SHIIDVERLELT s on z.ID = s.ZURCHIL_ID 
+    where 
+      (
+        (
+          z.STATUS_CODE = '8053' 
+          and z.ZH_STATUS_CODE is null
+        ) 
+        OR z.ZH_STATUS_CODE in (60002, 60005, 60003)
+      ) 
+      AND s.SHIIDVER_OGNOO BETWEEN '2023-04-20 00:00:00.000' 
+      AND '2023-07-20 00:00:00.000';
+    select 
+      min(SHIIDVER_OGNOO) 
+    from 
+      SHIIDVERLELT;
+    -- 5) Holbogdogch irgenii nasnii angilal
+    with agee as (
+      SELECT 
+        z.id, 
+        o.id, 
+        o.AGE as age 
+      FROM 
+        ZURCHIL z 
+        left JOIN OROLTSOGCH o ON z.ID = o.zurchil_id --                        left join hun h on o.SUBJECT_ID = h.ID
+        left join ZURCHIL_GAZAR_NOHTSOL m on z.ID = m.ZURCHIL_ID 
+      WHERE 
+        o.SUBJECT_TYPE_CODE = '1201' 
+        AND (
+          (
+            z.STATUS_CODE = '8053' 
+            and z.ZH_STATUS_CODE is null
+          ) 
+          OR z.ZH_STATUS_CODE in (60002, 60005, 60003)
+        ) 
+        AND z.ZH_SHIIDVERLESEN_OGNOO BETWEEN '2023-01-08 00:00:00.000' 
+        AND '2023-07-05 00:00:00.000'
+    ) 
+    SELECT 
+      SUM(CASE WHEN age < 17 THEN 1 ELSE 0 END) AS [Under 18], 
+      SUM(
+        CASE WHEN age BETWEEN 18 
+        AND 25 THEN 1 ELSE 0 END
+      ) AS [18 - 24], 
+      SUM(
+        CASE WHEN age BETWEEN 26 
+        AND 35 THEN 1 ELSE 0 END
+      ) AS [25 - 34], 
+      SUM(
+        CASE WHEN age BETWEEN 36 
+        AND 45 THEN 1 ELSE 0 END
+      ) AS [36 - 45], 
+      SUM(
+        CASE WHEN age BETWEEN 46 
+        AND 55 THEN 1 ELSE 0 END
+      ) AS [46 - 55], 
+      SUM(CASE WHEN age > 55 THEN 1 ELSE 0 END) AS [Over 55], 
+      SUM(CASE WHEN age IS NULL THEN 1 ELSE 0 END) AS [null] 
+    FROM 
+      agee;
+    -- 6)Hohiroliin dun
+    select 
+      h.id, 
+      count(h.HOHIROL_DUN), 
+      avg(h.HOHIROL_DUN), 
+      o.SUBJECT_TYPE_NAME 
+    from 
+      ZURCHIL z 
+      left join HOHIROL h on h.ZURCHIL_ID = z.ID 
+      left join shiidverlelt s on z.ID = s.ZURCHIL_ID 
+      left join OROLTSOGCH o on z.ID = o.ZURCHIL_ID 
+    where 
+      (
+        (
+          z.STATUS_CODE = '8053' 
+          and z.ZH_STATUS_CODE is null
+        ) 
+        OR z.ZH_STATUS_CODE in (60002, 60005, 60003)
+      ) 
+      AND s.SHIIDVER_OGNOO BETWEEN '2022-09-01 00:00:00.000' 
+      AND '2023-07-21 00:00:00.000' 
+      and o.SUBJECT_TYPE_NAME is not null 
+    group by 
+      h.id, 
+      SUBJECT_TYPE_NAME -- Hohirol tulsun dun
+    select 
+      sum(t.HOHIROL_TULSUN_DUN) 
+    from 
+      HOHIROL_TULULT t 
+      left join HOHIROL h on t.HOHIROL_ID = h.ID 
+      left join ZURCHIL Z on h.ZURCHIL_ID = Z.ID 
+      left join SHIIDVERLELT s on s.ZURCHIL_ID = z.ID 
+    WHERE 
+      (
+        (
+          z.STATUS_CODE = '8053' 
+          and z.ZH_STATUS_CODE is null
+        ) 
+        OR z.ZH_STATUS_CODE in (60002, 60005, 60003)
+      ) 
+      AND s.SHIIDVER_OGNOO BETWEEN '2023-04-21 00:00:00.000' 
+      AND '2023-07-21 00:00:00.000';
+    -- 7. Torguuliin dun
+    select 
+      sum(sh.TORGOH_NIIT_HEMJEE) 
+    from 
+      ZURCHIL z 
+      left join SHIIDVERLELT s on s.ZURCHIL_ID = z.ID 
+      left join SHIIDVERLELT_SHIITGEL sh on sh.ZURCHIL_ID = z.id 
+    where 
+      (
+        (
+          z.STATUS_CODE = '8053' 
+          and z.ZH_STATUS_CODE is null
+        ) 
+        OR z.ZH_STATUS_CODE in (60002, 60005, 60003)
+      ) 
+      AND s.SHIIDVER_OGNOO BETWEEN '2023-04-21 00:00:00.000' 
+      AND '2023-07-21 00:00:00.000';
+    --  Torguuli tulsun dun
+    select 
+      sum(t.TULSUN_HEMJEE) 
+    from 
+      ZURCHIL z 
+      left join SHIIDVERLELT s on s.ZURCHIL_ID = z.ID 
+      left join SHIIDVERLELT_SHIITGEL sh on sh.ZURCHIL_ID = z.id 
+      left join SHIIDVERLELT_SHIITGEL_TULULT t on t.SHIITGEL_ID = sh.id 
+    where 
+      (
+        (
+          z.STATUS_CODE = '8053' 
+          and z.ZH_STATUS_CODE is null
+        ) 
+        OR z.ZH_STATUS_CODE in (60002, 60005, 60003)
+      ) 
+      AND s.SHIIDVER_OGNOO BETWEEN '2023-04-21 00:00:00.000' 
+      AND '2023-07-21 00:00:00.000';
+    \end{mycode}
+    
